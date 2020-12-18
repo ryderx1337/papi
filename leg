@@ -1,0 +1,14 @@
+-- very cope leg movement for now will update later
+local last = 0
+local state = true
+local legs = ui.reference("AA", "Other", "Leg movement")
+client.set_event_callback("net_update_start", function()
+    local cur = globals.curtime()
+    entity.set_prop(entity.get_local_player(), "m_flPoseParameter", 0)
+
+    if cur > last then
+        state = not state
+        last = cur + 0.01
+        ui.set(legs, state and "never slide" or "always slide")
+     end
+end)
