@@ -12,3 +12,94 @@ client.set_event_callback("net_update_start", function()
         ui.set(legs, state and "never slide" or "always slide")
      end
 end)
+
+local lp = entity.get_local_player
+local hotkey = ui.new_hotkey("AA", "Anti-aimbot angles", "Legit AA")
+local desnyc_peek = ui.new_checkbox("AA", "Anti-aimbot angles", "Auto E peek")
+local mode = ui.new_combobox("AA", "Anti-aimbot angles", "On peek mode", {"Off", "Static", "Jitter"})
+local body_yaw = {ui.reference("AA", "Anti-aimbot angles", "Body yaw")}
+
+local clamp = function(min, max, value)
+    return math.max(min < max and min or max, math.min(min < max and max or min, value))
+end
+
+local predict = function(origin, player, amount, limit)
+    local head = origin
+    local vec = {entity.get_prop(player, "m_vecVelocity")}
+    local clamped_vec = {clamp(-limit, limit, vec[1]), clamp(-limit, limit, vec[2]), clamp(-limit, limit, vec[3])}
+    return {head[1] + clamped_vec[1] * amount, head[2] + clamped_vec[2] * amount, head[3]}
+end
+
+local is_visible = function(origin, ent)
+    if ent == nil or entity.is_alive(ent) == false or lp() == nil or entity.is_alive(lp()) == false then
+        return false
+    end
+
+    if origin[1] == nil then
+        return false
+    end
+
+
+    for i=1, 12 do
+        local target = {entity.hitbox_position(ent, i)}
+
+        if target[1] == nil then
+            return false
+        end
+
+        local trace = {client.trace_line(lp(), origin[1], origin[2], origin[3], target[1], target[2], target[3])}
+
+        if trace[2] == ent then
+            return true
+        end
+    end
+    return false
+end
+
+
+local player_visible = function()
+    local enemies = entity.get_players(true)
+    local origin = {client.eye_position()}
+    local predictive_origin = predict(origin, lp(), 1, 20)
+
+    --Found enemy visible 
+    for i=1, #enemies do
+        if is_visible(origin, enemies[i]) or is_visible(predictive_origin, enemies[i]) then
+            return true
+        end
+    end
+    return false
+end
+
+local setup_command = function(cmd)
+    if lp() == nil or entity.is_alive(lp()) == false then
+        return
+    end
+
+    local sex = false
+    local player_vis = player_visible()
+
+    if player_vis and ui.get(desnyc_peek) then
+        sex = true
+    end
+    
+    if ui.get(hotkey) then
+        sex = true
+    end
+    
+    if ui.get(mode) == "Static" then
+        ui.set(body_yaw[1], player_vis and "Static" or "Jitter")
+    elseif ui.get(mode) == "Jitter" then
+        ui.set(body_yaw[1], player_vis and "Jitter" or "Static")
+    end
+
+    if sex then
+        cmd.allow_send_packet = false
+
+        if cmd.chokedcommands ~= 0 then
+            cmd.in_use = 1
+        end
+    end
+end
+
+client.set_event_callback("setup_command", setup_command)
