@@ -9,7 +9,7 @@ client.set_event_callback("net_update_start", function()
     if cur > last then
         state = not state
         last = cur + 0.01
-        ui.set(legs, state and "never slide" or "always slide")
+        ui.set(legs, state and "Off" or "always slide")
      end
 end)
 
